@@ -139,6 +139,7 @@ function App() {
 			},
 		});
 		setPhotoGallery((prev) => [...prev, ...data.results]);
+		setHasMore(data.total_pages > pageNumber);
 		setLoading(false);
 	};
 

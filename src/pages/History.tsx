@@ -45,19 +45,47 @@ const GalleryDiv = styled.div`
 const BASE_URL = "https://api.unsplash.com";
 
 const History = () => {
-	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>();
+	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>([]);
+	const [pageNumber, setPageNumber] = useState<number | null>(null);
+	const [hasMore, setHasMore] = useState(false);
+	const [query, setQuery] = useState("");
 
 	const context = useContext(historyContext);
+
+	const observer = useRef<IntersectionObserver | null>(null);
+	const lastImageElement = useCallback(
+		(node: HTMLImageElement | null) => {
+			if (!hasMore || !node) return;
+			if (observer.current) observer.current.disconnect();
+			observer.current = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					setPageNumber((prevPage) => {
+						return prevPage + 1;
+					});
+				}
+			});
+			observer.current.observe(node);
+		},
+		[hasMore]
+	);
+
+	useEffect(() => {
+		if (pageNumber !== null) {
+			fetchPhotos(query);
+		}
+	}, [pageNumber]);
 
 	const fetchPhotos = async (query) => {
 		const { data } = await axios.get(`${BASE_URL}/search/photos`, {
 			params: {
 				query: query,
+				page: pageNumber,
 				per_page: 20,
 				client_id: import.meta.env.VITE_API_KEY,
 			},
 		});
-		setPhotoGallery([...data.results]);
+		setPhotoGallery((prev) => [...prev, ...data.results]);
+		setHasMore(data.total_pages > pageNumber);
 	};
 
 	return (
@@ -66,7 +94,13 @@ const History = () => {
 				<h1>Search History</h1>
 				<div>
 					{context?.searchHistory.map((historyQuery) => (
-						<p key={historyQuery} onClick={() => fetchPhotos(historyQuery)}>
+						<p
+							key={historyQuery}
+							onClick={() => {
+								setQuery(historyQuery);
+								fetchPhotos(historyQuery);
+							}}
+						>
 							{historyQuery}
 						</p>
 					))}
@@ -75,11 +109,24 @@ const History = () => {
 			{
 				<GalleryDiv>
 					{photoGallery &&
-						photoGallery.map((image: PhotosType | undefined) => (
-							<Link to={`/${image?.id}`} key={image?.id}>
-								<img src={image?.urls.regular} alt={image?.alt_description} />
-							</Link>
-						))}
+						photoGallery?.map((image: PhotosType | undefined, index) => {
+							if (index === photoGallery.length - 1) {
+								return (
+									<img
+										ref={lastImageElement}
+										key={image.id}
+										src={image.urls.regular}
+										alt={image.alt_description}
+									/>
+								);
+							} else {
+								return (
+									<Link to={`/${image.id}`} key={image.id}>
+										<img src={image.urls.regular} alt={image.alt_description} />
+									</Link>
+								);
+							}
+						})}
 				</GalleryDiv>
 			}
 		</main>

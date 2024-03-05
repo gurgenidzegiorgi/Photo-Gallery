@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useLoaderData, useNavigate, useParams } from "react-router-dom";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import { styled } from "styled-components";
 import { SinglePhoto } from "../types/Types";
 import closeBtn from "../assets/images/remove-icon.svg";
@@ -63,8 +63,6 @@ const ModalWrapper = styled.div`
 const ImageModal = () => {
 	const data = useLoaderData() as SinglePhoto;
 	const navigate = useNavigate();
-	const id = useParams();
-	console.log(data, id);
 
 	const onClose = () => navigate("/");
 	return (

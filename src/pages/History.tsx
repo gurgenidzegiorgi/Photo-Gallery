@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import { styled } from "styled-components";
 import { PhotosType } from "../types/Types";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { historyContext } from "../Root";
-import axios from "axios";
+import { baseContext } from "../App";
+import fetchPhotos from "../types/API";
 
 const HistoryDiv = styled.div`
 	display: flex;
@@ -42,7 +42,6 @@ const GalleryDiv = styled.div`
 		object-fit: cover;
 	}
 `;
-const BASE_URL = "https://api.unsplash.com";
 
 const History = () => {
 	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>([]);
@@ -50,7 +49,7 @@ const History = () => {
 	const [hasMore, setHasMore] = useState(false);
 	const [query, setQuery] = useState("");
 
-	const context = useContext(historyContext);
+	const context = useContext(baseContext);
 
 	const observer = useRef<IntersectionObserver | null>(null);
 	const lastImageElement = useCallback(
@@ -71,22 +70,12 @@ const History = () => {
 
 	useEffect(() => {
 		if (pageNumber !== null) {
-			fetchPhotos(query);
+			fetchPhotos(query, pageNumber, context).then((data) => {
+				setPhotoGallery((prev) => [...prev, ...data.results]);
+				setHasMore(data.total_pages > pageNumber);
+			});
 		}
 	}, [pageNumber]);
-
-	const fetchPhotos = async (query) => {
-		const { data } = await axios.get(`${BASE_URL}/search/photos`, {
-			params: {
-				query: query,
-				page: pageNumber,
-				per_page: 20,
-				client_id: import.meta.env.VITE_API_KEY,
-			},
-		});
-		setPhotoGallery((prev) => [...prev, ...data.results]);
-		setHasMore(data.total_pages > pageNumber);
-	};
 
 	return (
 		<main>
@@ -98,7 +87,10 @@ const History = () => {
 							key={historyQuery}
 							onClick={() => {
 								setQuery(historyQuery);
-								fetchPhotos(historyQuery);
+								fetchPhotos(historyQuery, pageNumber, context).then((data) => {
+									setPhotoGallery((prev) => [...prev, ...data.results]);
+									setHasMore(data.total_pages > pageNumber);
+								});
 							}}
 						>
 							{historyQuery}

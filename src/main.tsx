@@ -3,6 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import ReactDOM from "react-dom/client";
 
-import Root from "./Root";
+import Root from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(<Root />);

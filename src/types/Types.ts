@@ -153,16 +153,9 @@ export type SinglePhoto = {
 
 export type PhotosType = typeof photo;
 
-// const { data } = useQuery<PhotosType[] | undefined>({
-// 	queryKey: [debounceSearch],
-// 	queryFn: getPhotos,
-// });
-// function getPhotos() {
-// 	return axios
-// 		.get(
-// 			`${BASE_URL}/search/photos?query=${debounceSearch}&page=${pageNumber}&per_page=${IMAGES_PER_PAGE}&client_id=${
-// 				import.meta.env.VITE_API_KEY
-// 			}`
-// 		)
-// 		.then((res) => res.data);
-// }
+export type BaseContextType = {
+	searchHistory: string[];
+	setSearchHistroy: React.Dispatch<React.SetStateAction<string[]>>;
+	BASE_URL: string;
+	IMAGE_PER_PAGE: number;
+};

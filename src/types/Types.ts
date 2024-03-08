@@ -154,8 +154,6 @@ export type SinglePhoto = {
 export type PhotosType = typeof photo;
 
 export type BaseContextType = {
-	searchHistory: string[];
-	setSearchHistroy: React.Dispatch<React.SetStateAction<string[]>>;
 	BASE_URL: string;
 	IMAGE_PER_PAGE: number;
 };

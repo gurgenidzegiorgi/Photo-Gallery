@@ -1,26 +1,15 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useLoaderData } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { styled } from "styled-components";
-
-import removeIcon from "../assets/images/remove-icon.svg";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, Outlet, useLoaderData } from "react-router-dom";
 import { useDebounce } from "../hooks/useDebounce";
 import { PhotosType } from "../types/Types";
-import axios from "axios";
 
-const GalleryDiv = styled.div`
-	display: grid;
-	gap: 1rem;
-	grid-template-columns: repeat(4, 300px);
-	grid-template-rows: repeat(5, 300px);
-
-	img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-`;
+import removeIcon from "../assets/images/remove-icon.svg";
+import { baseContext } from "../App";
+import fetchPhotos from "../types/API";
 
 const InputDiv = styled.div`
 	display: flex;
@@ -28,10 +17,6 @@ const InputDiv = styled.div`
 	align-items: center;
 	gap: 3rem;
 
-	h1 {
-		font-size: 5rem;
-		color: olive;
-	}
 	.input {
 		position: relative;
 		input {
@@ -60,15 +45,32 @@ const InputDiv = styled.div`
 	}
 `;
 
+const GalleryDiv = styled.div`
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(4, 1fr);
+	grid-template-rows: repeat(5, 1fr);
+
+	img {
+		width: 300px;
+		height: 300px;
+		object-fit: cover;
+	}
+`;
+
 function Home() {
-	const data = useLoaderData() as PhotosType[];
-	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>([]);
-	const [uniquePhotoIds, setUniquePhotoIds] = useState<Set<string>>(new Set());
+	const data1 = useLoaderData() as PhotosType[];
+
+	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>(data1);
 	const [query, setQuery] = useState("");
-	const [pageNumber, setPageNumber] = useState(1);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(false);
+	const [searchHistory, setSearchHistroy] = useState<string[]>([]);
+	localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
+
+	const [pageNumber, setPageNumber] = useState<number | null>(1);
+	const [loading, setLoading] = useState(false);
 	const [hasMore, setHasMore] = useState(false);
+
+	const context = useContext(baseContext);
 	const debounceSearch = useDebounce(query, 1000);
 
 	const observer = useRef<IntersectionObserver | null>(null);
@@ -79,10 +81,8 @@ function Home() {
 			observer.current = new IntersectionObserver((entries) => {
 				if (entries[0].isIntersecting) {
 					setPageNumber((prevPage) => {
-						console.log("setter", pageNumber);
 						return prevPage + 1;
 					});
-					console.log("useCallBack", pageNumber, hasMore);
 				}
 			});
 			observer.current.observe(node);
@@ -91,55 +91,31 @@ function Home() {
 	);
 
 	useEffect(() => {
-		fetchPhotos();
-	}, [pageNumber]);
-
-	useEffect(() => {
-		const fetchInitialPhotos = async () => {
-			const { data } = await axios.get(
-				`${BASE_URL}/photos?per_page=20&order_by=popular&client_id=${
-					import.meta.env.VITE_API_KEY
-				}`
-			);
-			console.log(data);
-			setPhotoGallery(data);
+		if (pageNumber === 1) return;
+		fetchPhotos(query, pageNumber, context).then((data) => {
+			setPhotoGallery((prev) => [...prev, ...data.results]);
 			setLoading(false);
-		};
-		fetchInitialPhotos();
-		setPhotoGallery([]);
-	}, []);
+			setHasMore(data.total_pages > pageNumber);
+		});
+		setLoading(false);
+		console.log(photoGallery);
+	}, [pageNumber]);
 
 	useEffect(() => {
 		if (!query) return;
 		setLoading(true);
 		setPhotoGallery([]);
-		fetchPhotos();
+		fetchPhotos(query, pageNumber, context).then((data) => {
+			setPhotoGallery((prev) => [...prev, ...data.results]);
+			setLoading(false);
+			setHasMore(data.total_pages > pageNumber);
+		});
+		setSearchHistroy((prev) => [...prev, query]);
 	}, [debounceSearch]);
-
-	const fetchPhotos = async () => {
-		const { data } = await axios.get(
-			`${BASE_URL}/search/photos?query=${query}&page=${pageNumber}&per_page=${IMAGES_PER_PAGE}&client_id=${
-				import.meta.env.VITE_API_KEY
-			}`
-		);
-		const newPhotos = data.results.filter(
-			(photo: PhotosType) => !uniquePhotoIds.has(photo.id)
-		);
-		const newPhotoIds = new Set<string>(
-			newPhotos.map((photo: PhotosType) => photo.id)
-		);
-
-		setUniquePhotoIds((prev) => new Set([...prev, ...newPhotoIds]));
-		setPhotoGallery((prev) => [...prev, ...newPhotos]);
-		setHasMore(pageNumber < data.total_pages);
-		setLoading(false);
-		// console.log("fetchPhotos", pageNumber, uniquePhotoIds, photoGallery);
-	};
-
 	return (
 		<>
+			<Outlet />
 			<InputDiv>
-				<h1>Image Search</h1>
 				<div className="input">
 					<input
 						type="text"
@@ -150,16 +126,31 @@ function Home() {
 					<img src={removeIcon} onClick={() => setQuery("")} alt="X icon" />
 				</div>
 			</InputDiv>
-			<GalleryDiv>
-				{photoGallery &&
-					photoGallery?.map((image: PhotosType) => (
-						<img
-							key={image?.id}
-							src={image?.urls.regular}
-							alt={image?.alt_description}
-						/>
-					))}
-			</GalleryDiv>
+			{!loading ? (
+				<GalleryDiv>
+					{photoGallery &&
+						photoGallery?.map((image: PhotosType | undefined, index) => {
+							if (index === photoGallery.length - 1) {
+								return (
+									<img
+										ref={lastImageElement}
+										key={image.id}
+										src={image.urls.regular}
+										alt={image.alt_description}
+									/>
+								);
+							} else {
+								return (
+									<Link to={`/${image.id}`} key={image.id}>
+										<img src={image.urls.regular} alt={image.alt_description} />
+									</Link>
+								);
+							}
+						})}
+				</GalleryDiv>
+			) : (
+				<p style={{ fontSize: "2rem" }}>Loading...</p>
+			)}
 		</>
 	);
 }

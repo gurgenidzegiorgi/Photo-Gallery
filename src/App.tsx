@@ -11,8 +11,8 @@ import {
 import History from "./pages/History.tsx";
 import ImageModal from "./pages/ImageModal.tsx";
 import Header from "./components/Header.jsx";
-import App from "./Home.tsx";
-import { createContext, useState } from "react";
+import Home from "./pages/Home.tsx";
+import { createContext } from "react";
 import { BaseContextType } from "./types/Types.ts";
 
 const GlobalStyles = createGlobalStyle`
@@ -52,7 +52,7 @@ const router = createBrowserRouter(
 				element={
 					<>
 						<Header />
-						<App />
+						<Home />
 					</>
 				}
 				loader={async () =>
@@ -91,13 +91,9 @@ const router = createBrowserRouter(
 export const baseContext = createContext<BaseContextType>(null);
 
 const Root = () => {
-	const [searchHistory, setSearchHistroy] = useState<string[]>([]);
-
 	return (
 		<baseContext.Provider
 			value={{
-				searchHistory: searchHistory,
-				setSearchHistroy: setSearchHistroy,
 				BASE_URL: "https://api.unsplash.com",
 				IMAGE_PER_PAGE: 20,
 			}}

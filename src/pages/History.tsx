@@ -45,7 +45,7 @@ const GalleryDiv = styled.div`
 
 const History = () => {
 	const [photoGallery, setPhotoGallery] = useState<PhotosType[]>([]);
-	const [pageNumber, setPageNumber] = useState<number | null>(null);
+	const [pageNumber, setPageNumber] = useState<number | null>(1);
 	const [hasMore, setHasMore] = useState(false);
 	const [query, setQuery] = useState("");
 
@@ -77,25 +77,31 @@ const History = () => {
 		}
 	}, [pageNumber]);
 
+	const handleOnClick = (historyQuery) => {
+		setQuery(historyQuery);
+		fetchPhotos(historyQuery, pageNumber, context).then((data) => {
+			setPhotoGallery((prev) => [...data.results]);
+			setHasMore(data.total_pages > pageNumber);
+		});
+	};
+
 	return (
 		<main>
 			<HistoryDiv>
 				<h1>Search History</h1>
 				<div>
-					{context?.searchHistory.map((historyQuery) => (
-						<p
-							key={historyQuery}
-							onClick={() => {
-								setQuery(historyQuery);
-								fetchPhotos(historyQuery, pageNumber, context).then((data) => {
-									setPhotoGallery((prev) => [...prev, ...data.results]);
-									setHasMore(data.total_pages > pageNumber);
-								});
-							}}
-						>
-							{historyQuery}
-						</p>
-					))}
+					{JSON.parse(localStorage.getItem("searchHistory")).map(
+						(historyQuery) => (
+							<p
+								key={historyQuery}
+								onClick={() => {
+									handleOnClick(historyQuery);
+								}}
+							>
+								{historyQuery}
+							</p>
+						)
+					)}
 				</div>
 			</HistoryDiv>
 			{
